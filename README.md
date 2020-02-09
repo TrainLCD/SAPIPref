@@ -1,0 +1,2 @@
+# SAPIPref
+駅データ.jpから取ってきたStationAPI向けMySQLテーブルの住所情報に都道府県を付加する
