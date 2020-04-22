@@ -1,7 +1,9 @@
+# coding:utf-8
 from urllib.parse import urlparse
 import sys
 import mysql.connector
 
+# 都道府県置き換え
 url = urlparse('mysql://root@localhost:3306/stationapi')
 
 conn = mysql.connector.connect(
@@ -65,30 +67,41 @@ all_pref_list = [
     "鹿児島県",
     "沖縄県",
 ]
-select_query = "SELECT `station_cd`, `pref_cd`, `add` FROM stations WHERE `add`"
+stations_select_query = "SELECT `station_cd`, `pref_cd`, `address` FROM stations WHERE `address`"
+lines_select_query = "SELECT `line_cd`, `line_color_c` FROM `lines`"
 
 for i, pref in enumerate(all_pref_list):
     # 北海道
     if i is 0:
-        select_query += " NOT LIKE '{}%'".format(pref)
+        stations_select_query += " NOT LIKE '{}%'".format(pref)
         continue
-    select_query += " AND `add` NOT LIKE '{}%'".format(pref)
+    stations_select_query += " AND `address` NOT LIKE '{}%'".format(pref)
 
 cursor = conn.cursor()
 try:
-    cursor.execute(select_query)
+    cursor.execute(stations_select_query)
     all_station = cursor.fetchall()
     for station in all_station:
-        print(station)
         pref = all_pref_list[int(station[1] - 1)]
         new_addr = "{}{}".format(pref, station[2])
-        update_query = "UPDATE `stations` SET `add`='{}' WHERE  `station_cd`={}".format(new_addr, station[0])
-        print(update_query)
+        update_query = "UPDATE `stations` SET `address`='{}' WHERE  `station_cd`={}".format(new_addr, station[0])
         cursor.execute(update_query)
         conn.commit()
+    cursor.execute(lines_select_query)
+    all_lines = cursor.fetchall()
+    for stored_line in all_lines:
+        line_id = stored_line[0]
+        line_color = stored_line[1]
+        if line_color is not None and len(line_color) is not 6:
+            padded = line_color.rjust(6, '0')
+            update_query = "UPDATE `lines` SET `line_color_c`='{}' WHERE  `line_cd`={}".format(padded, line_id)
+            cursor.execute(update_query)
+            conn.commit()
 except Exception as e:
     conn.rollback()
     raise e
 finally:
     cursor.close()
-    conn.close()
+
+# 後片付け
+conn.close()
