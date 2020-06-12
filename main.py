@@ -69,6 +69,7 @@ all_pref_list = [
 ]
 stations_select_query = "SELECT `station_cd`, `pref_cd`, `address` FROM stations WHERE `address`"
 lines_select_query = "SELECT `line_cd`, `line_color_c` FROM `lines`"
+name_r_select_query = "SELECT `station_name`, `station_name_r` FROM stations"
 
 for i, pref in enumerate(all_pref_list):
     # 北海道
@@ -79,6 +80,7 @@ for i, pref in enumerate(all_pref_list):
 
 cursor = conn.cursor()
 try:
+    # すべての駅に都道府県をつける
     cursor.execute(stations_select_query)
     all_station = cursor.fetchall()
     for station in all_station:
@@ -87,6 +89,7 @@ try:
         update_query = "UPDATE `stations` SET `address`='{}' WHERE  `station_cd`={}".format(new_addr, station[0])
         cursor.execute(update_query)
         conn.commit()
+    # すべての路線の桁を合わせる
     cursor.execute(lines_select_query)
     all_lines = cursor.fetchall()
     for stored_line in all_lines:
@@ -97,6 +100,15 @@ try:
             update_query = "UPDATE `lines` SET `line_color_c`='{}' WHERE  `line_cd`={}".format(padded, line_id)
             cursor.execute(update_query)
             conn.commit()
+    # ローカライズされてない駅を検出
+    cursor.execute(name_r_select_query)
+    all_stations_name_r = cursor.fetchall()
+    print("THESE STATATIONS ARE NOT LOCALIZED!")
+    for station in all_stations_name_r:
+        name = station[0]
+        name_r = station[1]
+        if name_r[0].islower() is True:
+            print("%s: %s" % (name, name_r))
 except Exception as e:
     conn.rollback()
     raise e
