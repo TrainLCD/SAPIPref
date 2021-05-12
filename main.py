@@ -10,11 +10,12 @@ conn = mysql.connector.connect(
     host=url.hostname or 'localhost',
     port=url.port or 3306,
     user=url.username or 'root',
-    password=url.password or '',
+    password=url.password or 'password',
     database=url.path[1:],
+    auth_plugin='mysql_native_password'
 )
 
-if conn.is_connected() is False:
+if conn.is_connected() == False:
     print("Database connection failed! Please check the credential!")
     sys.exit()
 
@@ -73,7 +74,7 @@ name_r_select_query = "SELECT `station_name`, `station_name_r` FROM stations"
 
 for i, pref in enumerate(all_pref_list):
     # 北海道
-    if i is 0:
+    if i == 0:
         stations_select_query += " NOT LIKE '{}%'".format(pref)
         continue
     stations_select_query += " AND `address` NOT LIKE '{}%'".format(pref)
@@ -86,7 +87,8 @@ try:
     for station in all_station:
         pref = all_pref_list[int(station[1] - 1)]
         new_addr = "{}{}".format(pref, station[2])
-        update_query = "UPDATE `stations` SET `address`='{}' WHERE  `station_cd`={}".format(new_addr, station[0])
+        update_query = "UPDATE `stations` SET `address`='{}' WHERE  `station_cd`={}".format(
+            new_addr, station[0])
         cursor.execute(update_query)
         conn.commit()
     # すべての路線の桁を合わせる
@@ -95,20 +97,12 @@ try:
     for stored_line in all_lines:
         line_id = stored_line[0]
         line_color = stored_line[1]
-        if line_color is not None and len(line_color) is not 6:
+        if line_color != None and len(line_color) != 6:
             padded = line_color.rjust(6, '0')
-            update_query = "UPDATE `lines` SET `line_color_c`='{}' WHERE  `line_cd`={}".format(padded, line_id)
+            update_query = "UPDATE `lines` SET `line_color_c`='{}' WHERE  `line_cd`={}".format(
+                padded, line_id)
             cursor.execute(update_query)
             conn.commit()
-    # ローカライズされてない駅を検出
-    cursor.execute(name_r_select_query)
-    all_stations_name_r = cursor.fetchall()
-    print("THESE STATATIONS ARE NOT LOCALIZED!")
-    for station in all_stations_name_r:
-        name = station[0]
-        name_r = station[1]
-        if name_r[0].islower() is True:
-            print("%s: %s" % (name, name_r))
 except Exception as e:
     conn.rollback()
     raise e
