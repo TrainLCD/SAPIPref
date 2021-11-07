@@ -1,6 +1,7 @@
 # coding:utf-8
-from urllib.parse import urlparse
 import sys
+from urllib.parse import urlparse
+
 import mysql.connector
 
 # 都道府県置き換え
@@ -70,7 +71,7 @@ all_pref_list = [
 ]
 stations_select_query = "SELECT `station_cd`, `pref_cd`, `address` FROM stations WHERE `address`"
 lines_select_query = "SELECT `line_cd`, `line_color_c` FROM `lines`"
-name_r_select_query = "SELECT `station_name`, `station_name_r` FROM stations"
+foreign_name_select_query = "SELECT `station_name`, `station_name_zh`, `station_name_ko` FROM stations"
 
 for i, pref in enumerate(all_pref_list):
     # 北海道
@@ -103,6 +104,23 @@ try:
                 padded, line_id)
             cursor.execute(update_query)
             conn.commit()
+    # ローカライズされてない駅を検出
+    cursor.execute(foreign_name_select_query)
+    all_foreign_name = cursor.fetchall()
+    print("THESE STATATIONS ARE NOT LOCALIZED!")
+    for station in all_foreign_name:
+        name = station[0]
+        name_zh = station[1]
+        name_ko = station[2]
+        zh_not_localized = name_zh == ""
+        ko_not_localized = name_ko == ""
+        if zh_not_localized == True or ko_not_localized == True:
+            not_localized_languages = []
+            if zh_not_localized == True:
+                not_localized_languages.append("ZH")
+            if ko_not_localized == True:
+                not_localized_languages.append("KO")
+            print("[%s]: %s" % ('|'.join(not_localized_languages), name))
 except Exception as e:
     conn.rollback()
     raise e
